@@ -14,14 +14,12 @@ import glob
 import random
 import string
 import pathlib
+import shutil
 
 # Globals
 
 FRAMES_PER_SEC = 10
-RM_FRAMES = True
-RM_SUBMIT = True
-RM_OUTPUT = True
-RM_ERRORS = True
+PRESERVE_WORKSPACE = False
 
 # Functions
 
@@ -42,14 +40,16 @@ def generate_submit_file(ident, base_dir, submit_file, in_file, nframes, log_fil
 	f = open(f'{workspace}/{submit_file}', 'w')
 
 	# Common Variables
-	f.write('universe = vanilla\n')
-	f.write('executable = /afs/crc.nd.edu/group/ccl/software/x86_64/redhat7/povray/3.7/bin/povray\n')
-	f.write(f'output = {workspace}/$(PROCESS).output\n')
-	f.write(f'error = {workspace}/$(PROCESS).error\n')
-	f.write(f'transfer_input_files = {base_dir}/{in_file}\n')
-	f.write('should_transfer_files = yes\n')
-	f.write('when_to_transfer_output = on_exit\n')
-	f.write(f'log = {base_dir}/{log_file}\n')
+	f.write(f'''
+	universe = vanilla
+	executable = /afs/crc.nd.edu/group/ccl/software/x86_64/redhat7/povray/3.7/bin/povray
+	output = {workspace}/$(PROCESS).output
+	error = {workspace}/$(PROCESS).error
+	transfer_input_files = {base_dir}/{in_file}
+	should_transfer_files = yes
+	when_to_transfer_output = on_exit
+	log = {base_dir}/{log_file}
+	''')
 
 	# Write Remaps
 	f.write('transfer_output_remaps = "')
@@ -105,19 +105,13 @@ if __name__ == '__main__':
 
 	# Wait for jobs to finish
 	os.system(f'condor_wait {LOG_FILE}')
+	print(f'File Created: {LOG_FILE}')
 
 	# Join files together into movie (.mpg)
-	os.system(f'ffmpeg -nostdin -r 10 -i {WORKSPACE}/frame%03d.png -r ntsc {OUT_FILE}')
-
-	# Determine Files to Delete
-	guillotine = []
-	#if RM_FRAMES: guillotine += glob.glob(f'./{IDENTIFIER}-frame*.png')
-	#if RM_OUTPUT: guillotine += glob.glob(f'./{IDENTIFIER}-*.output')
-	#if RM_ERRORS: guillotine += glob.glob(f'./{IDENTIFIER}-*.error')
-	#if RM_SUBMIT: guillotine += [ SUBMIT_FILE ]
+	os.system(f'ffmpeg -loglevel error -nostdin -r {FRAMES_PER_SEC} -i {WORKSPACE}/frame%03d.png -r ntsc {OUT_FILE}')
+	print(f'File Created: {OUT_FILE}')
 
 	# Delete Files
-	# @TODO Error check
-	for f in guillotine:
-		os.remove(f)
+	if not PRESERVE_WORKSPACE:
+		shutil.rmtree(WORKSPACE)
 	
