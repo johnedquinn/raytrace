@@ -1,0 +1,86 @@
+#!/bin/python3 
+
+##
+# @file    condor_povray
+# @desc    Main driver of application
+# @author  John Ed Quinn (jquinn13)
+##
+
+# Imports
+
+import sys
+import os
+
+# Globals
+
+FRAMES_PER_SEC = 10
+
+# Functions
+
+def usage(exit_code=0):
+	print('''Usage: {} IN_FILE OUT_FILE NFRAMES XSIZE YSIZE
+		- IN_FILE   input file (.pov)
+		- OUT_FILE  output file (.mpg)
+		- NFRAMES   number of frames (at 10 frames/sec)
+		- XSIZE     resolution (x)
+		- YSIZE     resolution (y)
+	'''.format(os.path.basename(sys.argv[0])))
+	sys.exit(exit_code)
+
+def generate_submit_file(in_file, nframes):
+	# Open File to Write
+	f = open("submit_file.submit", "w")
+
+	# Common Variables
+	f.write("universe = vanilla\n")
+	f.write("executable = povray\n")
+	f.write("output = test.output\n")
+	f.write("should_transfer_files = yes\n")
+	f.write("when_to_transfer_output = on_exit\n")
+	f.write("log = test.logfile\n")
+
+	# Write Arguments
+	# @TODO Update K value
+	f.write("queue arguments from (\n")
+	for i in range(nframes):
+		inc = i / nframes
+		f.write(f'\t+I{in_file} +Oframe$(PROCESS).png +K.0\n')
+	f.write(")\n");
+
+	# Close File
+	f.close()
+
+# Main Driver
+if __name__ == '__main__':
+
+	# Check Args Length
+	if len(sys.argv) != 6:
+		usage(1)
+
+	# Grab Arguments
+	IN_FILE  = sys.argv[1]
+	OUT_FILE = sys.argv[2]
+	NFRAMES  = int(sys.argv[3])
+	XSIZE    = int(sys.argv[4])
+	YSIZE    = int(sys.argv[5])
+
+	# Check Arguments
+	# @TODO
+
+	# Generate Condor Submit File for Each Job
+	# All same log file
+	# @TODO
+	# Job: "povray +Irubiks.pov +Oframe000.png +K.0"
+	generate_submit_file(IN_FILE, NFRAMES)
+
+	# Call condor_submit as needed
+	# @TODO
+
+	# Wait for jobs to finish
+	# @TODO
+
+	# Join files together into movie (.mpg)
+	# @TODO
+
+	# Delete .png files
+	# @TODO
