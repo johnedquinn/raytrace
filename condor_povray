@@ -13,6 +13,7 @@ import os
 import glob
 import random
 import string
+import pathlib
 
 # Globals
 
@@ -30,24 +31,32 @@ def usage(exit_code=0):
 		- OUT_FILE  output file (.mpg)
 		- NFRAMES   number of frames (at 10 frames/sec)
 		- XSIZE     resolution (x)
-		- YSIZE     resolution (y)
-	'''.format(os.path.basename(sys.argv[0])))
+		- YSIZE     resolution (y)'''.format(os.path.basename(sys.argv[0])))
 	sys.exit(exit_code)
 
-def generate_submit_file(ident, submit_file, in_file, nframes, log_file):
+def generate_submit_file(ident, base_dir, submit_file, in_file, nframes, log_file):
+	# Determine Workspace
+	workspace = f'{base_dir}/{ident}'
+
 	# Open File to Write
-	f = open(submit_file, 'w')
+	f = open(f'{workspace}/{submit_file}', 'w')
 
 	# Common Variables
-	# @TODO Update input files
 	f.write('universe = vanilla\n')
 	f.write('executable = /afs/crc.nd.edu/group/ccl/software/x86_64/redhat7/povray/3.7/bin/povray\n')
-	f.write(f'output = {ident}-$(PROCESS).output\n')
-	f.write(f'error = {ident}-$(PROCESS).error\n')
-	f.write('transfer_input_files = rubiks.pov, WRC_RubiksCube.inc\n')
+	f.write(f'output = {workspace}/$(PROCESS).output\n')
+	f.write(f'error = {workspace}/$(PROCESS).error\n')
+	f.write(f'transfer_input_files = {base_dir}/{in_file}\n')
 	f.write('should_transfer_files = yes\n')
 	f.write('when_to_transfer_output = on_exit\n')
-	f.write(f'log = {log_file}\n')
+	f.write(f'log = {base_dir}/{log_file}\n')
+
+	# Write Remaps
+	f.write('transfer_output_remaps = "')
+	f.write(f'_condor_stdout = {workspace}/_condor_stdout; _condor_stderr = {workspace}/_condor_stderr;')
+	for i in range(nframes):
+		f.write(f'frame{i:03d}.png = {workspace}/frame{i:03d}.png;')
+	f.write('"\n')
 
 	# Write Arguments
 	f.write('queue arguments from (\n')
@@ -58,7 +67,7 @@ def generate_submit_file(ident, submit_file, in_file, nframes, log_file):
 			inc_str = f'{inc:.3f}'[1:]
 		else:
 			inc_str = '1'
-		f.write(f'\t+I{in_file} +O{ident}-frame{i:03d}.png +K{inc_str}\n')
+		f.write(f'\t+I{in_file} +Oframe{i:03d}.png +K{inc_str}\n')
 	f.write(')\n');
 
 	# Close File
@@ -71,8 +80,13 @@ if __name__ == '__main__':
 	if len(sys.argv) != 6:
 		usage(1)
 
+	# Find Current Working Directory
+	BASE_DIR = os.path.abspath(sys.argv[0] + '/..')
+
 	# Create Workspace
 	IDENTIFIER = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+	WORKSPACE = f'{BASE_DIR}/{IDENTIFIER}'
+	os.mkdir(WORKSPACE)
 
 	# Grab Arguments
 	IN_FILE  = sys.argv[1]
@@ -83,28 +97,24 @@ if __name__ == '__main__':
 	LOG_FILE = f'movie{XSIZE}.log'
 	SUBMIT_FILE = f'{IDENTIFIER}.submit'
 
-	# Check Arguments
-	# @TODO
-
 	# Generate Condor Submit File for Each Job
-	generate_submit_file(IDENTIFIER, SUBMIT_FILE, IN_FILE, NFRAMES, LOG_FILE)
+	generate_submit_file(IDENTIFIER, BASE_DIR, SUBMIT_FILE, IN_FILE, NFRAMES, LOG_FILE)
 
 	# Call condor_submit as needed
-	os.system(f'condor_submit {SUBMIT_FILE}')
+	os.system(f'condor_submit {WORKSPACE}/{SUBMIT_FILE}')
 
 	# Wait for jobs to finish
 	os.system(f'condor_wait {LOG_FILE}')
 
 	# Join files together into movie (.mpg)
-	# @TODO Change params
-	os.system(f'ffmpeg -r 10 -i {IDENTIFIER}-frame%03d.png -r ntsc movie.mpg')
+	os.system(f'ffmpeg -nostdin -r 10 -i {WORKSPACE}/frame%03d.png -r ntsc {OUT_FILE}')
 
 	# Determine Files to Delete
 	guillotine = []
-	if RM_FRAMES: guillotine += glob.glob(f'./IDENTIFIER-frame*.png')
-	if RM_OUTPUT: guillotine += glob.glob(f'./{IDENTIFIER}-*-output')
-	if RM_ERRORS: guillotine += glob.glob(f'./{IDENTIFIER}-*-error')
-	if RM_SUBMIT: guillotine += [ SUBMIT_FILE ]
+	#if RM_FRAMES: guillotine += glob.glob(f'./{IDENTIFIER}-frame*.png')
+	#if RM_OUTPUT: guillotine += glob.glob(f'./{IDENTIFIER}-*.output')
+	#if RM_ERRORS: guillotine += glob.glob(f'./{IDENTIFIER}-*.error')
+	#if RM_SUBMIT: guillotine += [ SUBMIT_FILE ]
 
 	# Delete Files
 	# @TODO Error check
