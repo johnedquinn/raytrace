@@ -50,7 +50,6 @@ def generate_submit_file(ident, submit_file, in_file, nframes, log_file):
 	f.write(f'log = {log_file}\n')
 
 	# Write Arguments
-	# @TODO Update K value
 	f.write('queue arguments from (\n')
 	for i in range(nframes):
 		inc_str = ''
