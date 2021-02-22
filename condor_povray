@@ -32,7 +32,7 @@ def usage(exit_code=0):
 		- YSIZE     resolution (y)'''.format(os.path.basename(sys.argv[0])))
 	sys.exit(exit_code)
 
-def generate_submit_file(ident, base_dir, submit_file, in_file, nframes, log_file):
+def generate_submit_file(ident, base_dir, submit_file, in_file, nframes, log_file, xsize, ysize):
 	# Determine Workspace
 	workspace = f'{base_dir}/{ident}'
 
@@ -67,7 +67,7 @@ def generate_submit_file(ident, base_dir, submit_file, in_file, nframes, log_fil
 			inc_str = f'{inc:.3f}'[1:]
 		else:
 			inc_str = '1'
-		f.write(f'\t+I{in_file} +Oframe{i:03d}.png +K{inc_str}\n')
+		f.write(f'\t+I{in_file} +Oframe{i:03d}.png +W{xsize} +H{ysize} +K{inc_str}\n')
 	f.write(')\n');
 
 	# Close File
@@ -98,7 +98,7 @@ if __name__ == '__main__':
 	SUBMIT_FILE = f'{IDENTIFIER}.submit'
 
 	# Generate Condor Submit File for Each Job
-	generate_submit_file(IDENTIFIER, BASE_DIR, SUBMIT_FILE, IN_FILE, NFRAMES, LOG_FILE)
+	generate_submit_file(IDENTIFIER, BASE_DIR, SUBMIT_FILE, IN_FILE, NFRAMES, LOG_FILE, XSIZE, YSIZE)
 
 	# Call condor_submit as needed
 	os.system(f'condor_submit {WORKSPACE}/{SUBMIT_FILE}')
