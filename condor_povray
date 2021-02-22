@@ -10,10 +10,17 @@
 
 import sys
 import os
+import glob
+import random
+import string
 
 # Globals
 
 FRAMES_PER_SEC = 10
+RM_FRAMES = True
+RM_SUBMIT = True
+RM_OUTPUT = True
+RM_ERRORS = True
 
 # Functions
 
@@ -27,25 +34,33 @@ def usage(exit_code=0):
 	'''.format(os.path.basename(sys.argv[0])))
 	sys.exit(exit_code)
 
-def generate_submit_file(in_file, nframes):
+def generate_submit_file(ident, submit_file, in_file, nframes, log_file):
 	# Open File to Write
-	f = open("submit_file.submit", "w")
+	f = open(submit_file, 'w')
 
 	# Common Variables
-	f.write("universe = vanilla\n")
-	f.write("executable = povray\n")
-	f.write("output = test.output\n")
-	f.write("should_transfer_files = yes\n")
-	f.write("when_to_transfer_output = on_exit\n")
-	f.write("log = test.logfile\n")
+	# @TODO Update input files
+	f.write('universe = vanilla\n')
+	f.write('executable = /afs/crc.nd.edu/group/ccl/software/x86_64/redhat7/povray/3.7/bin/povray\n')
+	f.write(f'output = {ident}-$(PROCESS).output\n')
+	f.write(f'error = {ident}-$(PROCESS).error\n')
+	f.write('transfer_input_files = rubiks.pov, WRC_RubiksCube.inc\n')
+	f.write('should_transfer_files = yes\n')
+	f.write('when_to_transfer_output = on_exit\n')
+	f.write(f'log = {log_file}\n')
 
 	# Write Arguments
 	# @TODO Update K value
-	f.write("queue arguments from (\n")
+	f.write('queue arguments from (\n')
 	for i in range(nframes):
-		inc = i / nframes
-		f.write(f'\t+I{in_file} +Oframe$(PROCESS).png +K.0\n')
-	f.write(")\n");
+		inc_str = ''
+		if i != nframes - 1:
+			inc = i / nframes
+			inc_str = f'{inc:.3f}'[1:]
+		else:
+			inc_str = '1'
+		f.write(f'\t+I{in_file} +O{ident}-frame{i:03d}.png +K{inc_str}\n')
+	f.write(')\n');
 
 	# Close File
 	f.close()
@@ -57,30 +72,43 @@ if __name__ == '__main__':
 	if len(sys.argv) != 6:
 		usage(1)
 
+	# Create Workspace
+	IDENTIFIER = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+
 	# Grab Arguments
 	IN_FILE  = sys.argv[1]
 	OUT_FILE = sys.argv[2]
 	NFRAMES  = int(sys.argv[3])
 	XSIZE    = int(sys.argv[4])
 	YSIZE    = int(sys.argv[5])
+	LOG_FILE = f'movie{XSIZE}.log'
+	SUBMIT_FILE = f'{IDENTIFIER}.submit'
 
 	# Check Arguments
 	# @TODO
 
 	# Generate Condor Submit File for Each Job
-	# All same log file
-	# @TODO
-	# Job: "povray +Irubiks.pov +Oframe000.png +K.0"
-	generate_submit_file(IN_FILE, NFRAMES)
+	generate_submit_file(IDENTIFIER, SUBMIT_FILE, IN_FILE, NFRAMES, LOG_FILE)
 
 	# Call condor_submit as needed
-	# @TODO
+	os.system(f'condor_submit {SUBMIT_FILE}')
 
 	# Wait for jobs to finish
-	# @TODO
+	os.system(f'condor_wait {LOG_FILE}')
 
 	# Join files together into movie (.mpg)
-	# @TODO
+	# @TODO Change params
+	os.system(f'ffmpeg -r 10 -i {IDENTIFIER}-frame%03d.png -r ntsc movie.mpg')
 
-	# Delete .png files
-	# @TODO
+	# Determine Files to Delete
+	guillotine = []
+	if RM_FRAMES: guillotine += glob.glob(f'./IDENTIFIER-frame*.png')
+	if RM_OUTPUT: guillotine += glob.glob(f'./{IDENTIFIER}-*-output')
+	if RM_ERRORS: guillotine += glob.glob(f'./{IDENTIFIER}-*-error')
+	if RM_SUBMIT: guillotine += [ SUBMIT_FILE ]
+
+	# Delete Files
+	# @TODO Error check
+	for f in guillotine:
+		os.remove(f)
+	
