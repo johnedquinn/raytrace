@@ -3,7 +3,7 @@
 - Date: 2021 March 01
 
 ## POVray Object
-- The object used can be found [here](http://lib.povray.org/searchcollection/index.php) and searching for Buckyball.
+- The object used can be found [here](http://lib.povray.org/searchcollection/index.php) by searching for Buckyball.
 
 ## Single Machine Estimates
 - Executing POVray directly, using the following resolutions, we can determine the amount of time needed to render a single video frame:
