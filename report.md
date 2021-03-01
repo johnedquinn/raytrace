@@ -18,4 +18,26 @@
 	- 1920x1080: 7726.2s
 
 ## Analysis of Distributed Computation
-- 
+
+### General Analysis
+- At each run of `condor_povray`, in the order from 320 to 1920, the time between submission and first execution becomes greater and greater. This may have been due to resource limits and additional condor submissions across the condor pool at Notre Dame.
+
+### 320x400 Log Analysis
+- At the peak of the distributed computation, 120 jobs ran at once.
+- For the most part, the computation ran smoothly. There was a steady completion of jobs, with a small number of jobs taking longer than usual (causing the completion to not be perfectly linear) towards the end of the run.
+- The total elapsed time was 208s.
+
+### 640x480 Log Analysis
+- At the peak of the distributed computation, 115 jobs ran at once.
+- For the most part, the computation ran smoothly. There was a steady completion of jobs, with a small number of jobs taking longer than usual (causing the completion to not be perfectly linear) towards the end of the run.
+- The total elapsed time was 229s.
+
+### 1280x720 Log Analysis
+- At the peak of the distributed computation, 120 jobs ran at once.
+- For the most part, the computation ran smoothly. There was a steady completion of jobs, with a small number of jobs taking longer than usual (causing the completion to not be perfectly linear) towards the end of the run.
+- The total elapsed time was 389s.
+
+### 1920x1080 Log Analysis
+- At the peak of the distributed computation, 120 jobs ran at once.
+- For the most part, the computation ran smoothly. There was a steady completion of jobs, with a small number of jobs taking longer than usual (causing the completion to not be perfectly linear) towards the end of the run.
+- The total elapsed time was 384s.
